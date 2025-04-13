@@ -74,6 +74,7 @@ unordered_map<string, string> SB_opcode_map = {
     {"bne", "1100011"},
     {"bge", "1100011"},
     {"blt", "1100011"},
+    
 };
 
 unordered_map<string, string> U_opcode_map = {
@@ -138,6 +139,7 @@ unordered_map<string, string> func3_map = {
     {"bne", "001"},
     {"bge", "101"},
     {"blt", "100"},
+    
 };
 
 // func7 map
