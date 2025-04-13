@@ -61,6 +61,9 @@ void init_sim() {
     // Clear register file
     reg_file.fill(0);
     reg_file[2] = 0x7FFFFFDC; // Stack pointer
+    reg_file[3] = 0x10000000; // Link register
+    reg_file[10] = 0x00000001;
+    reg_file[11] = 0x07FFFFDC;
 
     // Clear memory structures
     code.clear();
@@ -257,8 +260,11 @@ void decode() {
     uint32_t rd     = (ir >> 7) & 0x1F;
     uint32_t func3  = (ir >> 12) & 0x7;
     uint32_t rs1    = (ir >> 15) & 0x1F;
-    uint32_t rs2    = (ir >> 20) & 0x1F;
+    rs2    = (ir >> 20) & 0x1F;
     uint32_t func7  = (ir >> 25) & 0x7F;
+
+
+    
     
     // I-type immediate
     int32_t imm_i = static_cast<int32_t>(ir) >> 20;  // auto sign-extends
@@ -280,7 +286,8 @@ void decode() {
                     (((ir >> 20) & 0x1) << 11) | (((ir >> 21) & 0x3FF) << 1);
     if (imm_j & 0x100000) imm_j |= 0xFFE00000;  // sign-extend 21 bits
     
-
+    cout << "rs1 is " << rs1 << "rs2 is " << rs2 << endl; 
+ 
     // Reset control signals
     ctrl = Control();
     dst_reg = 0; // Initialize to 0, set only for instructions with rd
@@ -462,10 +469,17 @@ void decode() {
     if (ctrl.alu_op == "BEQ" || ctrl.alu_op == "BNE" || ctrl.alu_op == "BLT" || ctrl.alu_op == "BGE") {
         reg_a_val = reg_file[rs1];
         reg_b_val = reg_file[rs2]; // Use rs2 for comparison
-    } else if (ctrl.alu_op != "LUI" && ctrl.alu_op != "EXIT") {
+    }
+    else if (ctrl.alu_op == "STORE"){
+        reg_a_val = reg_file[rs1];
+        cout << "x9 is " << to_hex(reg_a_val) << endl;
+    } 
+    else if (ctrl.alu_op != "LUI" && ctrl.alu_op != "EXIT") {
         reg_a_val = reg_file[rs1];
         reg_b_val = ctrl.use_imm ? rm : reg_file[rs2];
-    } else {
+    }
+    
+    else {
         reg_a_val = 0;
         reg_b_val = rm;
     }
@@ -551,6 +565,7 @@ void execute() {
     if (ctrl.alu_op == "LOAD" || ctrl.alu_op == "STORE") {
         mar = rz;
         rm = reg_file[rs2]; // For stores
+        cout << reg_file[rs2] << rs2 << " in reg _ file " << endl; 
     }
 
     cout << "ALU Op: " << ctrl.alu_op << ", Result: " << to_hex(rz);
@@ -562,6 +577,8 @@ void memory_access() {
     cout << "\n--- Memory Access Stage ---\n";
     
     ry = rz; // Start by passing ALU result or return address
+
+    cout << "ry  "<< to_hex(ry) << "  rz  "<< to_hex(rz) << endl;
 
     // Handle memory read
     if (ctrl.mem_read) {
@@ -603,7 +620,7 @@ void memory_access() {
 
         if (!found)
             memory.push_back({mar, rm});
-
+        cout << "mar  " << to_hex(mar) << " rm " << to_hex(rm) << endl; 
         cout << "Wrote " << ctrl.mem_size << " to " << to_hex(mar) << ": " << to_hex(rm) << endl;
 
         write_data_mc("data.mc"); // Save after store
