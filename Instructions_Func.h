@@ -40,14 +40,16 @@ public:
         msg = message;
     }
     // To Alter error
+    
+    void PrintError()
+    {
+        cout << "Code is exited with error code " << err << ". \"" << msg << "\"";
+    }
+
     void AlterError(ErrorType error, string message)
     {
         err = error;
         msg = message;
-    }
-    void PrintError()
-    {
-        cout << "Code is exited with error code " << err << ". \"" << msg << "\"";
     }
 };
 int Calculate_Immediate(const string &hex, int bit_width, bool is_signed, Error *output_error)
@@ -237,9 +239,7 @@ int Label_Offset_Parameter(unordered_map<string, long long> labels_PC, const str
    
 
     // This function will return the number of instructions to skip
-    for (const auto& pair : labels_PC) {
-        cout << pair.first << " => " << pair.second << endl;
-    }
+   
 
     if (labels_PC.find(label) != labels_PC.end())
     {
@@ -310,6 +310,7 @@ const RISC_V_Instructions InitializeInstruction(const unordered_map<string, long
             else
             {
                 // Altering error to invalid Syntax
+            
                 (*output_error).AlterError(ERROR_SYNTAX, "Typed Syntax is invalid");
                 (*output_error).PrintError();
                 // Exiting with error code
@@ -360,6 +361,7 @@ const RISC_V_Instructions InitializeInstruction(const unordered_map<string, long
             else
             {
                 // Altering error to invalid Syntax
+               
                 (*output_error).AlterError(ERROR_SYNTAX, "Typed Syntax is invalid");
                 (*output_error).PrintError();
                 // Exiting with error code
@@ -395,6 +397,7 @@ const RISC_V_Instructions InitializeInstruction(const unordered_map<string, long
             else
             {
                 // Altering error to invalid Syntax
+               
                 (*output_error).AlterError(ERROR_SYNTAX, "Typed Syntax is invalid");
                 (*output_error).PrintError();
                 // Exiting with error code
@@ -434,6 +437,7 @@ const RISC_V_Instructions InitializeInstruction(const unordered_map<string, long
             else
             {
                 // Altering error to invalid Syntax
+                
                 (*output_error).AlterError(ERROR_SYNTAX, "Typed Syntax is invalid");
                 (*output_error).PrintError();
                 // Exiting with error code
@@ -479,6 +483,7 @@ const RISC_V_Instructions InitializeInstruction(const unordered_map<string, long
             else
             {
                 // Altering error to invalid Syntax
+            
                 (*output_error).AlterError(ERROR_SYNTAX, "Typed Syntax is invalid");
                 (*output_error).PrintError();
                 // Exiting with error code
@@ -509,6 +514,7 @@ const RISC_V_Instructions InitializeInstruction(const unordered_map<string, long
             else
             {
                 // Altering error to invalid Syntax
+               
                 (*output_error).AlterError(ERROR_SYNTAX, "Typed Syntax is invalid");
                 (*output_error).PrintError();
                 // Exiting with error code
