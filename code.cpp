@@ -504,8 +504,6 @@ void decode() {
              << ", ALU Op: " << ctrl.alu_op << endl;
     }
 }
-
-// Execute stage
 void execute() {
     cout << "\n--- Execute Stage ---\n";
     if (ctrl.alu_op.empty()) {
@@ -532,17 +530,21 @@ void execute() {
     else if (ctrl.alu_op == "LUI") rz = b;
     else if (ctrl.alu_op == "AUIPC") rz = pc - 4 + b;
     else if (ctrl.alu_op == "JAL") {
-        rz = pc;  // Save return address (pc + 4)
-         // Calculate and update jump target
-        branch_taken = 1;
-        cout << "JAL: Return address = " << to_hex(rz)   ;
-    }else if (ctrl.alu_op == "BEQ") branch_taken = (a == b);
+        rz = pc;  // Save return address (pc)
+        branch_taken = true;
+        cout << "JAL: Return address = " << to_hex(rz);
+    }
+    else if (ctrl.alu_op == "JALR") {
+        rz = pc;  // Save return address (pc)
+        branch_taken = true;
+        cout << "JALR: Return address = " << to_hex(rz) << ", Target = " << to_hex((a + b) & ~1);
+    }
+    else if (ctrl.alu_op == "BEQ") branch_taken = (a == b);
     else if (ctrl.alu_op == "BNE") branch_taken = (a != b);
     else if (ctrl.alu_op == "BLT") branch_taken = (a < b);
     else if (ctrl.alu_op == "BGE") branch_taken = (a >= b);
     else if (ctrl.alu_op == "LOAD" || ctrl.alu_op == "STORE") rz = a + b;
     else if (ctrl.alu_op == "EXIT") rz = 0;
-    else if (ctrl.alu_op == "JALR") branch_taken = 1;
     else {
         cout << "Error: Unknown ALU op " << ctrl.alu_op << endl;
         ir = 0;
@@ -550,28 +552,23 @@ void execute() {
     }
 
     if (ctrl.branch && branch_taken) {
-        pc = (ctrl.alu_op == "JALR") ? (a + b) & ~1 : (pc - 4 + rm); // Use rm for branch offset
+        pc = (ctrl.alu_op == "JALR") ? (a + b) & ~1 : (pc - 4 + rm);
     }
 
-    if (ctrl.alu_op == "JALR" || ctrl.alu_op == "JAL"){
-       cout << ", New PC= " << to_hex(pc) << endl;
-       branch_taken = true;
-    }
-
-    if(ctrl.alu_op == "JALR"){
-        rz = a + b;
+    if (ctrl.alu_op == "JALR" || ctrl.alu_op == "JAL") {
+       cout << ", New PC = " << to_hex(pc) << endl;
     }
 
     if (ctrl.alu_op == "LOAD" || ctrl.alu_op == "STORE") {
         mar = rz;
         rm = reg_file[rs2]; // For stores
-        cout << reg_file[rs2] << rs2 << " in reg _ file " << endl; 
+        cout << reg_file[rs2] << rs2 << " in reg_file " << endl; 
     }
 
     cout << "ALU Op: " << ctrl.alu_op << ", Result: " << to_hex(rz);
     if (ctrl.branch) cout << ", Branch Taken: " << branch_taken;
     cout << endl;
-}
+} 
 // Memory access stage
 void memory_access() {
     cout << "\n--- Memory Access Stage ---\n";
