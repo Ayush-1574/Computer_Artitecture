@@ -1,247 +1,117 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import './App.css';
-import CodeEditor from './components/CodeEditor';
-import OutputDisplay from './components/OutputDisplay';
-import LabelTable from './components/LabelTable';
-import StatusBar from './components/StatusBar';
+import RegisterFile from './components/RegisterFile';
+import MemoryView from './components/MemoryView';
+import PipelineStages from './components/PipelineStages';
+import CodeView from './components/CodeView';
+import SimulationControls, { useSimulator, SimulatorProvider } from './components/SimulationControls';
+import FileUploader from './components/FileUploader';
+import LogOutput from './components/LogOutput';
 
-function App() {
-  const [assemblyCode, setAssemblyCode] = useState('');
-  const [textOutput, setTextOutput] = useState([]);
-  const [dataOutput, setDataOutput] = useState([]);
-  const [labels, setLabels] = useState([]);
-  const [pc, setPc] = useState(0);
-  const [statusMessage, setStatusMessage] = useState('Ready to assemble');
-  const [isSuccess, setIsSuccess] = useState(null);
-  const [activeTab, setActiveTab] = useState('text');
+// This component will use the simulator context
+function AppContent() {
+  // Get simulator state from context
+  const simulator = useSimulator();
   
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setAssemblyCode(e.target.result);
-        setStatusMessage(`File loaded: ${file.name}`);
-      };
-      reader.readAsText(file);
-    }
-  };
+  const [log, setLog] = useState('RISC-V Simulator initialized');
 
-  const handleClear = () => {
-    setAssemblyCode('');
-    setTextOutput([]);
-    setDataOutput([]);
-    setLabels([]);
-    setPc(0);
-    setStatusMessage('Ready to assemble');
-    setIsSuccess(null);
-  };
-
-  const handleAssemble = () => {
-    if (assemblyCode.trim() === '') {
-      setStatusMessage('Error: No assembly code provided');
-      setIsSuccess(false);
-      return;
-    }
-
-    // Here you would integrate your C++ assembler code
-    // For now, we'll use placeholder code to simulate assembly
-
+  // Load text.mc file
+  const loadTextMC = (content) => {
     try {
-      // Parse labels from the assembly code
-      const parsedLabels = parseLabels(assemblyCode);
-      setLabels(parsedLabels);
-
-      // Generate text and data segments
-      const { textSegment, dataSegment } = assembleCode(assemblyCode, parsedLabels);
-      setTextOutput(textSegment);
-      setDataOutput(dataSegment);
-
-      setStatusMessage('Assembly completed successfully');
-      setIsSuccess(true);
-    } catch (error) {
-      setStatusMessage(`Error: ${error.message}`);
-      setIsSuccess(false);
-    }
-  };
-
-  // Placeholder functions - replace with your actual implementation
-  const parseLabels = (code) => {
-    // Simulate label parsing
-    const labels = [];
-    let currentAddress = 0;
-    
-    const lines = code.split('\n');
-    let inTextSection = false;
-    let inDataSection = false;
-
-    for (let line of lines) {
-      line = line.trim();
+      const lines = content.split('\n');
+      const newCode = [];
       
-      if (line === '.text') {
-        inTextSection = true;
-        inDataSection = false;
-        continue;
-      } else if (line === '.data') {
-        inTextSection = false;
-        inDataSection = true;
-        currentAddress = 0x10000000; // 268435456 in decimal
-        continue;
-      }
-      
-      if (line === '' || line.startsWith('#')) continue;
-      
-      const colonPos = line.indexOf(':');
-      if (colonPos !== -1) {
-        const labelName = line.substring(0, colonPos).trim();
-        const hexAddress = '0x' + currentAddress.toString(16).padStart(8, '0').toUpperCase();
+      lines.forEach(line => {
+        // Skip empty lines and comments
+        if (!line.trim() || line.trim().startsWith('#')) return;
         
-        labels.push({
-          name: labelName,
-          address: currentAddress,
-          hexAddress: hexAddress
-        });
-        
-        // If there's nothing after the colon, don't increment address
-        if (line.length <= colonPos + 1) continue;
-      }
-      
-      // Increment address based on section
-      if (inTextSection) {
-        currentAddress += 4; // Each instruction is 4 bytes
-      } else if (inDataSection) {
-        // Simple approximation - in real implementation, this would depend on data type
-        currentAddress += 4;
-      }
-    }
-    
-    return labels;
-  };
-
-  const assembleCode = (code, labels) => {
-    // Simulate code assembly
-    const textSegment = [];
-    const dataSegment = [];
-    let pc = 0;
-    let dataAddress = 0x10000000;
-    
-    const lines = code.split('\n');
-    let inTextSection = false;
-    let inDataSection = false;
-    
-    for (let line of lines) {
-      line = line.trim();
-      
-      if (line === '.text') {
-        inTextSection = true;
-        inDataSection = false;
-        continue;
-      } else if (line === '.data') {
-        inTextSection = false;
-        inDataSection = true;
-        continue;
-      }
-      
-      if (line === '' || line.startsWith('#')) continue;
-      
-      // Skip label declarations
-      if (line.includes(':')) {
-        const parts = line.split(':');
-        if (parts[1].trim() === '') continue;
-        line = parts[1].trim();
-      }
-      
-      if (inTextSection) {
-        const hexPc = '0x' + pc.toString(16).padStart(8, '0').toUpperCase();
-        // In real implementation, this would be the actual machine code
-        const machineCode = '0x' + Math.floor(Math.random() * 0xFFFFFFFF).toString(16).padStart(8, '0').toUpperCase();
-        textSegment.push({ address: hexPc, instruction: machineCode, assembly: line });
-        pc += 4;
-      } else if (inDataSection) {
-        const hexAddress = '0x' + dataAddress.toString(16).padStart(8, '0').toUpperCase();
-        
-        if (line.includes('.word')) {
-          const value = line.split('.word')[1].trim();
-          const hexValue = '0x' + parseInt(value).toString(16).padStart(8, '0').toUpperCase();
-          dataSegment.push({ address: hexAddress, value: hexValue, directive: line });
-          dataAddress += 4;
-        } else if (line.includes('.string') || line.includes('.asciiz')) {
-          // Extract string from between quotes
-          const match = line.match(/"([^"]*)"/);
-          if (match && match[1]) {
-            const str = match[1];
-            for (let i = 0; i < str.length; i += 4) {
-              const hexAddress = '0x' + dataAddress.toString(16).padStart(8, '0').toUpperCase();
-              const chunk = str.substr(i, 4);
-              let hexValue = '';
-              for (let j = 0; j < chunk.length; j++) {
-                hexValue += chunk.charCodeAt(j).toString(16).padStart(2, '0');
-              }
-              hexValue = '0x' + hexValue.padEnd(8, '0').toUpperCase();
-              dataSegment.push({ address: hexAddress, value: hexValue, directive: `"${chunk}"` });
-              dataAddress += 4;
-            }
-            // Add null terminator for .asciiz
-            if (line.includes('.asciiz')) {
-              const hexAddress = '0x' + dataAddress.toString(16).padStart(8, '0').toUpperCase();
-              dataSegment.push({ address: hexAddress, value: '0x00000000', directive: 'null terminator' });
-              dataAddress += 4;
-            }
-          }
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 2) {
+          const address = parseInt(parts[0], 16);
+          const instruction = parseInt(parts[1], 16);
+          newCode.push({ addr: address, instr: instruction });
         }
-      }
+      });
+      
+      // Here we would update the simulator state via context
+      // For now, just log it
+      setLog(prev => prev + '\nText.mc file loaded successfully.');
+    } catch (error) {
+      setLog(prev => prev + '\nError loading text.mc: ' + error.message);
     }
-    
-    return { textSegment, dataSegment };
+  };
+
+  // Load data.mc file
+  const loadDataMC = (content) => {
+    try {
+      const lines = content.split('\n');
+      const newMemory = [];
+      
+      lines.forEach(line => {
+        // Skip empty lines and comments
+        if (!line.trim() || line.trim().startsWith('#')) return;
+        
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 2) {
+          const address = parseInt(parts[0], 16);
+          const value = parseInt(parts[1], 16);
+          newMemory.push({ addr: address, value: value });
+        }
+      });
+      
+      // Here we would update the simulator state via context
+      // For now, just log it
+      setLog(prev => prev + '\nData.mc file loaded successfully.');
+    } catch (error) {
+      setLog(prev => prev + '\nError loading data.mc: ' + error.message);
+    }
   };
 
   return (
-    <div className="container">
+    <div className="app-container">
       <header>
-        <h1>RISC-V Assembler</h1>
+        <h1>RISC-V Simulator</h1>
       </header>
-
-      <div className="main-content">
-        <CodeEditor 
-          assemblyCode={assemblyCode}
-          setAssemblyCode={setAssemblyCode}
-          onAssemble={handleAssemble}
-          onClear={handleClear}
-          onFileUpload={handleFileUpload}
+      
+      <div className="upload-section">
+        <FileUploader onTextFileLoad={loadTextMC} onDataFileLoad={loadDataMC} />
+        <SimulationControls 
+          onStep={simulator.stepSimulation} 
+          onRun={simulator.toggleSimulation} 
+          onStop={simulator.toggleSimulation} 
+          onReset={simulator.resetSimulation}
+          isRunning={simulator.running}
         />
-
-        <div className="output-section">
-          <h2>Machine Code Output</h2>
-          <div className="tab-container">
-            <button 
-              className={`tab ${activeTab === 'text' ? 'active' : ''}`}
-              onClick={() => setActiveTab('text')}
-            >
-              Text Segment
-            </button>
-            <button 
-              className={`tab ${activeTab === 'data' ? 'active' : ''}`}
-              onClick={() => setActiveTab('data')}
-            >
-              Data Segment
-            </button>
-          </div>
-          <OutputDisplay 
-            textOutput={textOutput}
-            dataOutput={dataOutput}
-            activeTab={activeTab}
-          />
+        <div className="cycle-counter">
+          Cycle: {simulator.clock_cycles}
         </div>
-
-        <LabelTable labels={labels} />
-
-        <StatusBar 
-          message={statusMessage}
-          isSuccess={isSuccess}
-          pc={pc}
-        />
+      </div>
+      
+      <div className="main-content">
+        <div className="left-panel">
+          <CodeView code={simulator.code} pc={simulator.pc} />
+          <RegisterFile registers={simulator.reg_file} />
+        </div>
+        
+        <div className="center-panel">
+          <PipelineStages pipelineState={simulator.pipeline_stages} />
+        </div>
+        
+        <div className="right-panel">
+          <MemoryView memory={simulator.memory} />
+          <LogOutput log={log} />
+        </div>
       </div>
     </div>
+  );
+}
+
+// The main App component that wraps the content with the provider
+function App() {
+  return (
+    <SimulatorProvider>
+      <AppContent />
+    </SimulatorProvider>
   );
 }
 
